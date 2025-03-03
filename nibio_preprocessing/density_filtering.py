@@ -22,7 +22,8 @@ class DensityFiltering:
         # check if the file exists
         if not os.path.exists(self.path_data):
             raise Exception(f"File {self.path_data} does not exist.")
-        cmd_density = f"pdal density {self.path_data} {self.path_data_out} --threshold {self.min_density}"
+        file_name = os.path.split(self.path_data_out)[-1]
+        cmd_density = f"pdal density {self.path_data} {self.path_data_out} --lyr_name {file_name} --threshold {self.min_density}"
         subprocess.call(cmd_density, shell=True)
         self.mls_boundary_path = glob.glob(os.path.join(self.path_data_out, '*.shp'))[0]
 

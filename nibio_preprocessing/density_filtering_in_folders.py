@@ -2,7 +2,7 @@ import glob
 import os
 import argparse
 import shutil
-from nibio_preprocessing.density_filtering import DensityFiltering
+from density_filtering import DensityFiltering
 
 class DensityFilteringInFolders:
     def __init__(self, folder, min_density, count_threshold, buffer_size, verbose=False):
