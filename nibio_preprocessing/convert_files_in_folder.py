@@ -84,8 +84,8 @@ class ConvertFilesInFolder(object):
         #     self.convert_file(file_path)
 
         # use joblib to speed up the process
-        Parallel(n_jobs=-1)(delayed(self.convert_file)(file_path) for file_path in tqdm(file_paths))
-        
+        Parallel(n_jobs=-1, backend="multiprocessing")(delayed(self.convert_file)(file_path) for file_path in tqdm(file_paths))
+
         # print out the progress
         if self.verbose:
             # use logging to print out how many files were converted
