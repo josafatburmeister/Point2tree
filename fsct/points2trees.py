@@ -143,6 +143,8 @@ if __name__ == '__main__':
     # todo: this could be made smarter e.g. using distance
     buffer_tiles = params.ti.loc[indices[0][1:params.n_tiles**2]]['tile'].values
 
+    tiles = [params.pc]
+
     for i, t in tqdm(enumerate(buffer_tiles),
                      total=len(buffer_tiles),
                      desc='read in neighbouring tiles', 
@@ -157,20 +159,22 @@ if __name__ == '__main__':
             if len(tmp) == 0: continue
             tmp.loc[:, 'buffer'] = True
             tmp.loc[:, 'fn'] = t
-            params.pc = params.pc.append(tmp, ignore_index=True)
+            tiles.append(tmp)
         except:
             path = os.path.join(params.dir, f'{t:03}*.ply')
             if params.ignore_missing_tiles:
                 print(f'tile {path} not available')
             else:
                 raise Exception(f'tile {path} not available')
-    
+
+    params.pc = pd.concat(tiles, ignore_index=True)
+
     # --- this can be dropeed soon --- 
     if 'nz' in params.pc.columns: params.pc.rename(columns={'nz':'n_z'}, inplace=True)
         
     # save space
     params.pc = params.pc[[c for c in ['x', 'y', 'z', 'n_z', 'label', 'buffer', 'fn']]]
-    params.pc[['x', 'y', 'z', 'n_z']] = params.pc[['x', 'y', 'z', 'n_z']].astype(np.float32)
+    params.pc[['x', 'y', 'z', 'n_z']] = params.pc[['x', 'y', 'z', 'n_z']].astype(np.float64)
     params.pc[['label', 'fn']] = params.pc[['label', 'fn']].astype(np.int16)
 
     ### generate skeleton points
@@ -341,7 +345,7 @@ if __name__ == '__main__':
 
         # process leaf points
         lvs = params.pc.loc[(params.pc.label == 1) & (params.pc.n_z >= 2)].copy()
-        lvs = lvs.append(unlabelled_wood, ignore_index=True)
+        lvs = pd.concat((lvs, unlabelled_wood), ignore_index=True)
         lvs.reset_index(inplace=True)
 
         # voxelise
@@ -366,7 +370,7 @@ if __name__ == '__main__':
         cnrs.loc[:, 'VX'] = VX
 
         # and combine leaves and wood
-        branch_and_leaves = cnrs.append(chull[['x', 'y', 'z', 'label', 'stem', 'xlabel', 'clstr']])
+        branch_and_leaves = pd.concat((cnrs, chull[['x', 'y', 'z', 'label', 'stem', 'xlabel', 'clstr']]), ignore_index=True)
         branch_and_leaves.reset_index(inplace=True, drop=True)
 
         # find neighbouring branch and leaf points - used as entry points
@@ -420,7 +424,9 @@ if __name__ == '__main__':
                 rgb = RGB.loc[RGB.t_clstr == lv][['red', 'green', 'blue']].values[0] * 1.2
                 l2a.loc[:, ['red', 'green', 'blue']] = [c if c <= 255 else 255 for c in rgb]
 
-                stem = stem.append(l2a[['x', 'y', 'z', 'label', 'red', 'green', 'blue', 't_clstr', 'wood', 'distance']])
+                stem = pd.concat(
+                    (stem, l2a[['x', 'y', 'z', 'label', 'red', 'green', 'blue', 't_clstr', 'wood', 'distance']])
+                )
 
             stem = stem.loc[~stem.duplicated()]
             ply_io.write_ply(wood_fn.replace('leafoff', 'leafon'), 

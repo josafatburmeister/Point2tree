@@ -126,6 +126,7 @@ if __name__ == "__main__":
         },
         {
             "type": "writers.ply",
+            "storage_mode":"little endian",
             "filename": os.path.join(args.odir, "segmented_cleaned.ply")
         },
     ]

@@ -87,7 +87,8 @@ def subsample_point_cloud(pointcloud, min_spacing, num_cpu_cores=1):
             # mask = np.logical_and(pointcloud[:, 0] >= min_bound, pointcloud[:, 0] < max_bound)
             pc_slice = pointcloud[results]
             print("Slice size:", pc_slice.shape[0], "    Slice number:", i + 1, "/", num_slices)
-            slice_list.append([pc_slice, min_spacing])
+            if len(pc_slice) > 0:
+                slice_list.append([pc_slice, min_spacing])
 
         pointcloud = np.zeros((0, pointcloud.shape[1]))
         with get_context("spawn").Pool(processes=num_cpu_cores) as pool:

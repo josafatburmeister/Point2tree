@@ -76,23 +76,23 @@ echo "ADD_LEAVES_EDGE_LENGTH: $ADD_LEAVES_EDGE_LENGTH"
 
 # exit 0
 
-# Do the environment setup
-# check if PYTHONPATH is set to the current directory
-if [ -z "$PYTHONPATH" ]; then
-    echo "PYTHONPATH is not set. Setting it to the current directory"
-    export PYTHONPATH=$PWD
-else
-    echo "PYTHONPATH is set to '$PYTHONPATH'"
-fi
+# # Do the environment setup
+# # check if PYTHONPATH is set to the current directory
+# if [ -z "$PYTHONPATH" ]; then
+#     echo "PYTHONPATH is not set. Setting it to the current directory"
+#     export PYTHONPATH=$PWD
+# else
+#     echo "PYTHONPATH is set to '$PYTHONPATH'"
+# fi
 
 # conda activate pdal-env-1
 
-# check if activated conda environment is the same as the one specified in the parameters
-if [ "$CONDA_DEFAULT_ENV" != "$CONDA_ENV" ]; then
-    echo "The activated conda environment is not the same as the one specified in the parameters."
-    echo "Please activate the correct conda environment and run the script again."
-    exit 1
-fi
+# # check if activated conda environment is the same as the one specified in the parameters
+# if [ "$CONDA_DEFAULT_ENV" != "$CONDA_ENV" ]; then
+#     echo "The activated conda environment is not the same as the one specified in the parameters."
+#     echo "Please activate the correct conda environment and run the script again."
+#     exit 1
+# fi
 
 # if no input folder is provided, case a message and exit
 if [ -z "$data_folder" ]

@@ -105,7 +105,8 @@ fi
 python nibio_preprocessing/convert_files_in_folder.py --input_folder $data_folder --output_folder $data_folder --out_file_type las --in_place --verbose
 
 # do the density filtering
-python nibio_preprocessing/density_filtering_in_folders.py --input_folder $data_folder --min_density 1 --count_threshold 15000 --buffer_size 0.01
+# decreased min_density (point count threshold) from 15000 to 1
+python nibio_preprocessing/density_filtering_in_folders.py --input_folder $data_folder --min_density 1 --count_threshold 1 --buffer_size 0.01
 
 # clear input folder if CLEAR_INPUT_FOLDER is set to 1
 if [ $CLEAR_INPUT_FOLDER -eq 1 ]

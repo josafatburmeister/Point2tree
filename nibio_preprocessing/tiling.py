@@ -107,6 +107,7 @@ class Tiling:
                 },
                 {
                     "type":"writers.ply",
+                    "storage_mode":"little endian",
                     "filename":file_name_base +"#.ply" 
                 }
             ]

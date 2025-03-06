@@ -38,7 +38,12 @@ class ConvertFilesInFolder(object):
         # define the output file path
         output_file_path = os.path.join(self.output_folder, file_name_no_ext + "." + self.out_file_type)
         # define the command
-        command = "pdal translate -i {} -o {}".format(file_path, output_file_path)
+        if self.out_file_type == "ply":
+            command = "pdal translate -i {} -o {} --writers.ply.storage_mode='little endian'".format(
+                file_path, output_file_path
+            )
+        else:
+            command = "pdal translate -i {} -o {}".format(file_path, output_file_path)
         # run the command
         os.system(command)
 
