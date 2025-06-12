@@ -156,19 +156,20 @@ class Preprocessing:
                 id_offset = id_offset + len(point_divisions[t])
             # print('Thread:', thread, prev_id_offset, id_offset)
             prev_id_offset = id_offset
-            t = threading.Thread(
-                target=Preprocessing.threaded_boxes,
-                args=(
-                    self.point_cloud,
-                    self.box_dimensions,
-                    self.min_points_per_box,
-                    self.max_points_per_box,
-                    self.working_dir,
-                    id_offset,
-                    point_divisions[thread],
-                ),
-            )
-            threads.append(t)
+            if len(point_divisions[thread]) > 0:
+                t = threading.Thread(
+                    target=Preprocessing.threaded_boxes,
+                    args=(
+                        self.point_cloud,
+                        self.box_dimensions,
+                        self.min_points_per_box,
+                        self.max_points_per_box,
+                        self.working_dir,
+                        id_offset,
+                        point_divisions[thread],
+                    ),
+                )
+                threads.append(t)
 
         for x in threads:
             x.start()

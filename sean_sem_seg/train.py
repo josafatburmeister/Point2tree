@@ -167,19 +167,20 @@ class TrainModel:
         for thread in range(self.parameters["num_cpu_cores_preprocessing"]):
             for t in range(thread):
                 id_offset = id_offset + len(point_divisions[t])
-            t = threading.Thread(
-                target=self.threaded_boxes,
-                args=(
-                    point_cloud,
-                    self.parameters["sample_box_size_m"],
-                    self.parameters["min_points_per_box"],
-                    self.parameters["max_points_per_box"],
-                    sample_dir,
-                    id_offset,
-                    point_divisions[thread],
-                ),
-            )
-            threads.append(t)
+            if len(point_divisions[thread]) > 0:
+                t = threading.Thread(
+                    target=self.threaded_boxes,
+                    args=(
+                        point_cloud,
+                        self.parameters["sample_box_size_m"],
+                        self.parameters["min_points_per_box"],
+                        self.parameters["max_points_per_box"],
+                        sample_dir,
+                        id_offset,
+                        point_divisions[thread],
+                    ),
+                )
+                threads.append(t)
 
         for x in threads:
             x.start()
