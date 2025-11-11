@@ -44,6 +44,9 @@ def make_folder_structure(filename):
 
 def subsample(args):
     X, min_spacing = args
+    if len(X) <= 1:
+        return X
+
     neighbours = NearestNeighbors(n_neighbors=2, algorithm="kd_tree", metric="euclidean").fit(X[:, :3])
     distances, indices = neighbours.kneighbors(X[:, :3])
     X_keep = X[distances[:, 1] >= min_spacing]
