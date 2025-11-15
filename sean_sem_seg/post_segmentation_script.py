@@ -118,60 +118,65 @@ class PostProcessing:
             self.point_cloud[:, self.label_index] == self.terrain_class_label
         ]  # -2 is now the class label as we added the height above DTM column.
 
-        try:
+        if len(self.terrain_points) > 0:
             self.DTM = self.make_DTM(crop_dtm=True)
-        except ValueError:
-            raise DataQualityError("Failed to make DTM. \nThere probably aren't any terrain_points.")
 
-        save_file(self.output_dir + "DTM.las", self.DTM)
+            save_file(self.output_dir + "DTM.las", self.DTM)
 
-        self.convexhull = spatial.ConvexHull(self.DTM[:, :2])
-        self.plot_area = self.convexhull.volume / 10000  # volume is area in 2d.
-        print("Plot area is approximately", self.plot_area, "ha")
+            self.convexhull = spatial.ConvexHull(self.DTM[:, :2])
+            self.plot_area = self.convexhull.volume / 10000  # volume is area in 2d.
+            print("Plot area is approximately", self.plot_area, "ha")
 
-        above_and_below_DTM_trim_dist = 0.5 # meters (BEFORE: 0.2)
+            above_and_below_DTM_trim_dist = 0.5 # meters (BEFORE: 0.2)
 
-        self.point_cloud = get_heights_above_DTM(
-            self.point_cloud, self.DTM
-        )  # Add a height above DTM column to the point clouds.
+            self.point_cloud = get_heights_above_DTM(
+                self.point_cloud, self.DTM
+            )  # Add a height above DTM column to the point clouds.
 
-        # terrain points
-        self.terrain_points = self.point_cloud[self.point_cloud[:, self.label_index] == self.terrain_class_label]
-        self.terrain_points_rejected = np.vstack(
-            (
-                self.terrain_points[self.terrain_points[:, -1] <= -above_and_below_DTM_trim_dist],
-                self.terrain_points[self.terrain_points[:, -1] > above_and_below_DTM_trim_dist],
+            # terrain points
+            self.terrain_points = self.point_cloud[self.point_cloud[:, self.label_index] == self.terrain_class_label]
+            self.terrain_points_rejected = np.vstack(
+                (
+                    self.terrain_points[self.terrain_points[:, -1] <= -above_and_below_DTM_trim_dist],
+                    self.terrain_points[self.terrain_points[:, -1] > above_and_below_DTM_trim_dist],
+                )
             )
-        )
-        self.terrain_points = self.terrain_points[
-            np.logical_and(
-                self.terrain_points[:, -1] > -above_and_below_DTM_trim_dist,
-                self.terrain_points[:, -1] < above_and_below_DTM_trim_dist,
-            )
-        ]
+            self.terrain_points = self.terrain_points[
+                np.logical_and(
+                    self.terrain_points[:, -1] > -above_and_below_DTM_trim_dist,
+                    self.terrain_points[:, -1] < above_and_below_DTM_trim_dist,
+                )
+            ]
 
-        save_file(
-            self.output_dir + "terrain_points.las",
-            self.terrain_points,
-            headers_of_interest=self.headers_of_interest,
-            silent=False,
-        )
+            save_file(
+                self.output_dir + "terrain_points.las",
+                self.terrain_points,
+                headers_of_interest=self.headers_of_interest,
+                silent=False,
+            )
+        else:
+            self.convexhull = spatial.ConvexHull(self.point_cloud[:, :2])
+            self.plot_area = self.convexhull.volume / 10000  # volume is area in 2d.
+            print("Plot area is approximately", self.plot_area, "ha")
 
         # stem points
         self.stem_points = self.point_cloud[self.point_cloud[:, self.label_index] == self.stem_class_label]
-        self.terrain_points = np.vstack(
-            (
-                self.terrain_points,
-                self.stem_points[
-                    np.logical_and(
-                        self.stem_points[:, -1] >= -above_and_below_DTM_trim_dist,
-                        self.stem_points[:, -1] <= above_and_below_DTM_trim_dist,
-                    )
-                ],
+
+        if len(self.terrain_points) > 0:
+            self.terrain_points = np.vstack(
+                (
+                    self.terrain_points,
+                    self.stem_points[
+                        np.logical_and(
+                            self.stem_points[:, -1] >= -above_and_below_DTM_trim_dist,
+                            self.stem_points[:, -1] <= above_and_below_DTM_trim_dist,
+                        )
+                    ],
+                )
             )
-        )
-        self.stem_points_rejected = self.stem_points[self.stem_points[:, -1] <= above_and_below_DTM_trim_dist]
-        self.stem_points = self.stem_points[self.stem_points[:, -1] > above_and_below_DTM_trim_dist]
+            self.stem_points_rejected = self.stem_points[self.stem_points[:, -1] <= above_and_below_DTM_trim_dist]
+            self.stem_points = self.stem_points[self.stem_points[:, -1] > above_and_below_DTM_trim_dist]
+
         save_file(
             self.output_dir + "stem_points.las",
             self.stem_points,
@@ -183,19 +188,22 @@ class PostProcessing:
         if NUMBER_OF_CLASSES == 6:
             #branches
             self.branch_points = self.point_cloud[self.point_cloud[:, self.label_index] == self.branch_class_label]
-            self.terrain_points = np.vstack(
-                (
-                    self.terrain_points,
-                    self.branch_points[
-                        np.logical_and(
-                            self.branch_points[:, -1] >= -above_and_below_DTM_trim_dist,
-                            self.branch_points[:, -1] <= above_and_below_DTM_trim_dist,
-                        )
-                    ],
+
+            if len(self.terrain_points) > 0:
+                self.terrain_points = np.vstack(
+                    (
+                        self.terrain_points,
+                        self.branch_points[
+                            np.logical_and(
+                                self.branch_points[:, -1] >= -above_and_below_DTM_trim_dist,
+                                self.branch_points[:, -1] <= above_and_below_DTM_trim_dist,
+                            )
+                        ],
+                    )
                 )
-            )
-            self.branch_points_rejected = self.branch_points[self.branch_points[:, -1] <= above_and_below_DTM_trim_dist]
-            self.branch_points = self.branch_points[self.branch_points[:, -1] > above_and_below_DTM_trim_dist]
+                self.branch_points_rejected = self.branch_points[self.branch_points[:, -1] <= above_and_below_DTM_trim_dist]
+                self.branch_points = self.branch_points[self.branch_points[:, -1] > above_and_below_DTM_trim_dist]
+            
             save_file(
                 self.output_dir + "branch_points.las",
                 self.branch_points,
@@ -205,20 +213,23 @@ class PostProcessing:
 
             #low vegetation
             self.low_vegetation_points = self.point_cloud[self.point_cloud[:, self.label_index] == self.low_vegetation_class_label]
-            low_vegetation_threshold = 0.1
-            self.terrain_points = np.vstack(
-                (
-                    self.terrain_points,
-                    self.low_vegetation_points[
-                        np.logical_and(
-                            self.low_vegetation_points[:, -1] >= -low_vegetation_threshold,
-                            self.low_vegetation_points[:, -1] <= low_vegetation_threshold,
-                        )
-                    ],
+
+            if len(self.terrain_points) > 0:
+                low_vegetation_threshold = 0.1
+                self.terrain_points = np.vstack(
+                    (
+                        self.terrain_points,
+                        self.low_vegetation_points[
+                            np.logical_and(
+                                self.low_vegetation_points[:, -1] >= -low_vegetation_threshold,
+                                self.low_vegetation_points[:, -1] <= low_vegetation_threshold,
+                            )
+                        ],
+                    )
                 )
-            )
-            self.low_vegetation_points_rejected = self.low_vegetation_points[self.low_vegetation_points[:, -1] <= low_vegetation_threshold]
-            self.low_vegetation_points = self.low_vegetation_points[self.low_vegetation_points[:, -1] > low_vegetation_threshold]
+                self.low_vegetation_points_rejected = self.low_vegetation_points[self.low_vegetation_points[:, -1] <= low_vegetation_threshold]
+                self.low_vegetation_points = self.low_vegetation_points[self.low_vegetation_points[:, -1] > low_vegetation_threshold]
+
             save_file(
                 self.output_dir + "low_vegetation_points.las",
                 self.low_vegetation_points,
@@ -227,21 +238,24 @@ class PostProcessing:
             )
             
         self.vegetation_points = self.point_cloud[self.point_cloud[:, self.label_index] == self.vegetation_class_label]
-        self.terrain_points = np.vstack(
-            (
-                self.terrain_points,
-                self.vegetation_points[
-                    np.logical_and(
-                        self.vegetation_points[:, -1] >= -above_and_below_DTM_trim_dist,
-                        self.vegetation_points[:, -1] <= above_and_below_DTM_trim_dist,
-                    )
-                ],
+
+        if len(self.terrain_points) > 0:
+            self.terrain_points = np.vstack(
+                (
+                    self.terrain_points,
+                    self.vegetation_points[
+                        np.logical_and(
+                            self.vegetation_points[:, -1] >= -above_and_below_DTM_trim_dist,
+                            self.vegetation_points[:, -1] <= above_and_below_DTM_trim_dist,
+                        )
+                    ],
+                )
             )
-        )
-        self.vegetation_points_rejected = self.vegetation_points[
-            self.vegetation_points[:, -1] <= above_and_below_DTM_trim_dist
-        ]
-        self.vegetation_points = self.vegetation_points[self.vegetation_points[:, -1] > above_and_below_DTM_trim_dist]
+            self.vegetation_points_rejected = self.vegetation_points[
+                self.vegetation_points[:, -1] <= above_and_below_DTM_trim_dist
+            ]
+            self.vegetation_points = self.vegetation_points[self.vegetation_points[:, -1] > above_and_below_DTM_trim_dist]
+
         save_file(
             self.output_dir + "vegetation_points.las",
             self.vegetation_points,
@@ -252,27 +266,30 @@ class PostProcessing:
         self.cwd_points = self.point_cloud[
             self.point_cloud[:, self.label_index] == self.cwd_class_label
         ]  # -2 is now the class label as we added the height above DTM column.
-        self.terrain_points = np.vstack(
-            (
-                self.terrain_points,
-                self.cwd_points[
-                    np.logical_and(
-                        self.cwd_points[:, -1] >= -above_and_below_DTM_trim_dist,
-                        self.cwd_points[:, -1] <= above_and_below_DTM_trim_dist,
-                    )
-                ],
-            )
-        )
 
-        self.cwd_points_rejected = np.vstack(
-            (
-                self.cwd_points[self.cwd_points[:, -1] <= above_and_below_DTM_trim_dist],
-                self.cwd_points[self.cwd_points[:, -1] >= 10],
+        if len(self.terrain_points) > 0:
+            self.terrain_points = np.vstack(
+                (
+                    self.terrain_points,
+                    self.cwd_points[
+                        np.logical_and(
+                            self.cwd_points[:, -1] >= -above_and_below_DTM_trim_dist,
+                            self.cwd_points[:, -1] <= above_and_below_DTM_trim_dist,
+                        )
+                    ],
+                )
             )
-        )
-        self.cwd_points = self.cwd_points[
-            np.logical_and(self.cwd_points[:, -1] > above_and_below_DTM_trim_dist, self.cwd_points[:, -1] < 3)
-        ]
+
+            self.cwd_points_rejected = np.vstack(
+                (
+                    self.cwd_points[self.cwd_points[:, -1] <= above_and_below_DTM_trim_dist],
+                    self.cwd_points[self.cwd_points[:, -1] >= 10],
+                )
+            )
+            self.cwd_points = self.cwd_points[
+                np.logical_and(self.cwd_points[:, -1] > above_and_below_DTM_trim_dist, self.cwd_points[:, -1] < 3)
+            ]
+
         save_file(
             self.output_dir + "cwd_points.las",
             self.cwd_points,
