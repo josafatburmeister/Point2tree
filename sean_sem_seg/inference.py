@@ -104,6 +104,11 @@ class SemanticSegmentation:
 
         test_loader = DataLoader(test_dataset, batch_size=self.parameters["batch_size"], shuffle=False, num_workers=0)
 
+        if len(test_loader) == 0:
+            if self.parameters["delete_working_directory"]:
+                shutil.rmtree(self.working_dir, ignore_errors=True)
+            return
+
         model = Net(num_classes=NUM_CLASSES).to(self.device)
         if self.parameters["use_CPU_only"]:
             model.load_state_dict(
