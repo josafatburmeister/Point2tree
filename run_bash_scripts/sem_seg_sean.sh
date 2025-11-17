@@ -104,9 +104,8 @@ fi
 # do the conversion from laz to las if there are laz files in place (this is need for metrics calculation)
 python nibio_preprocessing/convert_files_in_folder.py --input_folder $data_folder --output_folder $data_folder --out_file_type las --in_place --verbose
 
-# do the density filtering
-# decreased min_density (point count threshold) from 15000 to 1
-python nibio_preprocessing/density_filtering_in_folders.py --input_folder $data_folder --min_density 1 --count_threshold 1 --buffer_size 0.01
+# disable density filtering
+# python nibio_preprocessing/density_filtering_in_folders.py --input_folder $data_folder --min_density 15000 --count_threshold 1 --buffer_size 0.01
 
 # clear input folder if CLEAR_INPUT_FOLDER is set to 1
 if [ $CLEAR_INPUT_FOLDER -eq 1 ]
