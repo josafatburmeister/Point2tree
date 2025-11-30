@@ -41,22 +41,25 @@ class AddGroundToInstSeg():
         for item in small_subset:
             tmp_dict[item] = []
 
-        for item in list(small_subset):
-            tmp_dict[item] = np.append(tmp_dict[item], inst_seg[item])
+        if inst_seg.header.point_count > 0:
+            for item in list(small_subset):
+                tmp_dict[item] = np.append(tmp_dict[item], inst_seg[item])
 
-        # add point of label 0 to the new file except for the instance_nr
-        for item in small_subset:
-            if item != 'instance_nr':
-                tmp_dict[item] = np.append(tmp_dict[item], sem_seg[item][sem_seg.label == 0])
 
-        # add instance_nr to the new file
-        tmp_dict['instance_nr'] = tmp_dict['instance_nr'] + 1
+            # add instance_nr to the new file
+            tmp_dict['instance_nr'] = tmp_dict['instance_nr'] + 1
 
-        # append numpy vector of zeros to the instance_nr which is the same length as the points of label 0
-        tmp_dict['instance_nr'] = np.append(
-            tmp_dict['instance_nr'], 
-            np.zeros(sem_seg['label'][sem_seg.label == 0].shape[0])
-            )
+        if sem_seg.header.point_count > 0:
+            # add point of label 0 to the new file except for the instance_nr
+            for item in small_subset:
+                if item != 'instance_nr':
+                    tmp_dict[item] = np.append(tmp_dict[item], sem_seg[item][sem_seg.label == 0])
+
+            # append numpy vector of zeros to the instance_nr which is the same length as the points of label 0
+            tmp_dict['instance_nr'] = np.append(
+                tmp_dict['instance_nr'], 
+                np.zeros(sem_seg['label'][sem_seg.label == 0].shape[0])
+                )
         
         for key in tmp_dict.keys():
             las[key] = tmp_dict[key]
