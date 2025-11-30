@@ -57,15 +57,19 @@ class PostProcessing:
         self.point_cloud, self.headers_of_interest = load_file(
             self.output_dir + "segmented.las", headers_of_interest=["x", "y", "z", "red", "green", "blue", "label"]
         )
-        self.point_cloud = np.hstack(
-            (self.point_cloud, np.zeros((self.point_cloud.shape[0], 1)))
-        )  # Add height above DTM column
-        self.headers_of_interest.append("height_above_DTM")  # Add height_above_DTM to the headers.
-        self.label_index = self.headers_of_interest.index("label")
-        self.point_cloud[:, self.label_index] = (
-            self.point_cloud[:, self.label_index] + 1
-        )  # index offset since noise_class was removed from inference.
-        self.plot_summary = pd.read_csv(self.output_dir + "plot_summary.csv", index_col=None)
+        if len(self.point_cloud) > 0:
+            self.point_cloud = np.hstack(
+                (self.point_cloud, np.zeros((self.point_cloud.shape[0], 1)))
+            )  # Add height above DTM column
+            self.headers_of_interest.append("height_above_DTM")  # Add height_above_DTM to the headers.
+            self.label_index = self.headers_of_interest.index("label")
+            self.point_cloud[:, self.label_index] = (
+                self.point_cloud[:, self.label_index] + 1
+            )  # index offset since noise_class was removed from inference.
+            self.plot_summary = pd.read_csv(self.output_dir + "plot_summary.csv", index_col=None)
+        else:
+            self.label_index = None
+            self.plot_summary = None
 
     def make_DTM(self, crop_dtm=False):
         print("Making DTM...")
@@ -113,6 +117,9 @@ class PostProcessing:
 
     def process_point_cloud(self):
         print("Processing point cloud...")
+
+        if len(self.point_cloud) == 0:
+            return
 
         self.terrain_points = self.point_cloud[
             self.point_cloud[:, self.label_index] == self.terrain_class_label
