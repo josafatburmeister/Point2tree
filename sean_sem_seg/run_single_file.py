@@ -104,36 +104,39 @@ if __name__ == "__main__":
     file_name = os.path.basename(args.point_cloud).split('.')[0]
     results_dir_name = os.path.join(dir_core_name, file_name + '_FSCT_output')
 
-    print("Copying results to output directory.")
-    shutil.copy(os.path.join(results_dir_name, "segmented_cleaned.las"), args.odir)
+    segmented_file = os.path.join(results_dir_name, "segmented_cleaned.las")
 
-    print("Doing reduction.")
+    if os.path.exists(segmented_file):
+        print("Copying results to output directory.")
+        shutil.copy(os.path.join(results_dir_name, "segmented_cleaned.las"), args.odir)
 
-    # reduce label value by 1
-    ReduceLabelsValuesInLas(
-        las_file_path = os.path.join(args.odir, "segmented_cleaned.las"),
-        label_name="label",
-        verbose=args.verbose
-        ).main()
+        print("Doing reduction.")
 
-    # translate segmented_cleaned.las to segmented_cleaned.ply using pdal
-    # create a pipeline for the translation
-    pipeline = [
-        {
-            "type": "readers.las",
-            "nosrs": True,
-            "filename": os.path.join(args.odir, "segmented_cleaned.las"),
-        },
-        {
-            "type": "writers.ply",
-            "storage_mode":"little endian",
-            "filename": os.path.join(args.odir, "segmented_cleaned.ply")
-        },
-    ]
-    # create a pipeline manager
-    pl = pdal.Pipeline(json.dumps(pipeline))
-    # execute the pipeline
-    pl.execute()
-    # rename the output file from "segmented_cleaned.las" to args.point_cloud.segmented.las
-    os.rename(os.path.join(args.odir, "segmented_cleaned.ply"), os.path.join(args.odir, args.point_cloud.split('/')[-1].split('.')[0] + ".segmented.ply"))
+        # reduce label value by 1
+        ReduceLabelsValuesInLas(
+            las_file_path = os.path.join(args.odir, "segmented_cleaned.las"),
+            label_name="label",
+            verbose=args.verbose
+            ).main()
+
+        # translate segmented_cleaned.las to segmented_cleaned.ply using pdal
+        # create a pipeline for the translation
+        pipeline = [
+            {
+                "type": "readers.las",
+                "nosrs": True,
+                "filename": os.path.join(args.odir, "segmented_cleaned.las"),
+            },
+            {
+                "type": "writers.ply",
+                "storage_mode":"little endian",
+                "filename": os.path.join(args.odir, "segmented_cleaned.ply")
+            },
+        ]
+        # create a pipeline manager
+        pl = pdal.Pipeline(json.dumps(pipeline))
+        # execute the pipeline
+        pl.execute()
+        # rename the output file from "segmented_cleaned.las" to args.point_cloud.segmented.las
+        os.rename(os.path.join(args.odir, "segmented_cleaned.ply"), os.path.join(args.odir, args.point_cloud.split('/')[-1].split('.')[0] + ".segmented.ply"))
 

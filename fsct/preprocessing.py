@@ -56,7 +56,7 @@ def Preprocessing(params):
         tile_index = pd.read_csv(params.tile_index, sep=' ', names=['fname', 'x', 'y'])
 
         # locate 8 nearest tiles
-        nn = NearestNeighbors(n_neighbors=9).fit(tile_index[['x', 'y']])
+        nn = NearestNeighbors(n_neighbors=min(9, len(tile_index))).fit(tile_index[['x', 'y']])
         distance, neighbours = nn.kneighbors(tile_index.loc[tile_index.fname == params.tile][['x', 'y']], 
                                    return_distance=True)
         neighbours = neighbours[np.where(distance <= params.max_distance_between_tiles)]
@@ -68,7 +68,7 @@ def Preprocessing(params):
                          desc='buffering tile with neighbouring points',
                          disable=False if params.verbose else True):
             fname = glob.glob(os.path.join(params.directory, f'*{tile.fname:03}*{params.input_format}'))
-            if len(fname) > 0: buffer = buffer.append(load_file(os.path.join(params.directory, fname[0])))
+            if len(fname) > 0: buffer = pd.concat([buffer, load_file(os.path.join(params.directory, fname[0]))])
 
         # select desired points
         buffer = buffer.loc[(buffer.x.between(params.pc.x.min() - params.buffer, 
@@ -78,7 +78,7 @@ def Preprocessing(params):
 
         buffer.loc[:, 'buffer'] = True
         if params.verbose: print(f'buffer adds an additional {len(buffer)} points')
-        params.pc = params.pc.append(buffer)
+        params.pc = pd.concat([params.pc, buffer])
 
     if params.subsample: # subsample if specified
         if params.verbose: print('downsampling to: %s m' % params.subsampling_min_spacing)
