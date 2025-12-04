@@ -162,8 +162,7 @@ class PostProcessing:
                 silent=False,
             )
         else:
-            xy = self.point_cloud[:, :2].to_numpy()
-            if (xy.min(axis=0) == xy.max(axis=0)).all():
+            if (self.point_cloud[:, :2].min(axis=0) == self.point_cloud[:, :2].max(axis=0)).all():
                 self.plot_area = 0
             self.convexhull = spatial.ConvexHull(self.point_cloud[:, :2])
             self.plot_area = self.convexhull.volume / 10000  # volume is area in 2d.
