@@ -43,6 +43,9 @@ def generate_path(samples, origins, n_neighbours=200, max_length=0):
     # removes isolated origin points i.e. > edge.length
     origins = [s for s in origins if s in edges.source.values] 
 
+    if len(origins) == 0:
+        return pd.DataFrame([], columns=['clstr', 'distance', 't_clstr', 'is_tip'])
+
     # compute graph
     G = nx.from_pandas_edgelist(edges, edge_attr=['length'])
     distance, shortest_path = nx.multi_source_dijkstra(G, 
@@ -358,94 +361,96 @@ if __name__ == '__main__':
         chull = chull.loc[[False if np.isnan(s) else True for s in chull.stem]]
         chull.loc[:, 'is_tip'] = chull.clstr.map(is_tip)
         chull = chull.loc[(chull.is_tip) & (chull.n_z > params.find_stems_height)]
-        chull.loc[:, 'xlabel'] = 2
 
-        # process leaf points
-        lvs = params.pc.loc[(params.pc.label == 1) & (params.pc.n_z >= 2)].copy()
-        lvs = pd.concat((lvs, unlabelled_wood), ignore_index=True)
-        lvs.reset_index(inplace=True)
+        if len(chull) > 0:
+            chull.loc[:, 'xlabel'] = 2
 
-        # voxelise
-        lvs = voxelise(lvs, length=params.add_leaves_voxel_length)
-        lvs_gb = lvs.groupby('VX')[xyz]
-        lvs_min = lvs_gb.min()
-        lvs_max = lvs_gb.max()
-        lvs_med = lvs_gb.median()
+            # process leaf points
+            lvs = params.pc.loc[(params.pc.label == 1) & (params.pc.n_z >= 2)].copy()
+            lvs = pd.concat((lvs, unlabelled_wood), ignore_index=True)
+            lvs.reset_index(inplace=True)
 
-        # find faces of leaf voxels and create database 
-        cnrs = np.vstack([lvs_min.x, lvs_med.y, lvs_med.z]).T
-        clstr = np.tile(np.arange(len(lvs_min.index)) + 1 + chull.clstr.max(), 6)
-        VX = np.tile(lvs_min.index, 6)
-        cnrs = np.vstack([cnrs, np.vstack([lvs_max.x, lvs_med.y, lvs_med.z]).T])
-        cnrs = np.vstack([cnrs, np.vstack([lvs_med.x, lvs_min.y, lvs_med.z]).T])
-        cnrs = np.vstack([cnrs, np.vstack([lvs_med.x, lvs_max.y, lvs_med.z]).T])
-        cnrs = np.vstack([cnrs, np.vstack([lvs_med.x, lvs_med.y, lvs_min.z]).T])
-        cnrs = np.vstack([cnrs, np.vstack([lvs_med.x, lvs_med.y, lvs_max.z]).T])
-        cnrs = pd.DataFrame(cnrs, columns=['x', 'y', 'z'])
-        cnrs.loc[:, 'xlabel'] = 1
-        cnrs.loc[:, 'clstr'] = clstr
-        cnrs.loc[:, 'VX'] = VX
+            # voxelise
+            lvs = voxelise(lvs, length=params.add_leaves_voxel_length)
+            lvs_gb = lvs.groupby('VX')[xyz]
+            lvs_min = lvs_gb.min()
+            lvs_max = lvs_gb.max()
+            lvs_med = lvs_gb.median()
 
-        # and combine leaves and wood
-        branch_and_leaves = pd.concat((cnrs, chull[['x', 'y', 'z', 'label', 'stem', 'xlabel', 'clstr']]), ignore_index=True)
-        branch_and_leaves.reset_index(inplace=True, drop=True)
+            # find faces of leaf voxels and create database 
+            cnrs = np.vstack([lvs_min.x, lvs_med.y, lvs_med.z]).T
+            clstr = np.tile(np.arange(len(lvs_min.index)) + 1 + chull.clstr.max(), 6)
+            VX = np.tile(lvs_min.index, 6)
+            cnrs = np.vstack([cnrs, np.vstack([lvs_max.x, lvs_med.y, lvs_med.z]).T])
+            cnrs = np.vstack([cnrs, np.vstack([lvs_med.x, lvs_min.y, lvs_med.z]).T])
+            cnrs = np.vstack([cnrs, np.vstack([lvs_med.x, lvs_max.y, lvs_med.z]).T])
+            cnrs = np.vstack([cnrs, np.vstack([lvs_med.x, lvs_med.y, lvs_min.z]).T])
+            cnrs = np.vstack([cnrs, np.vstack([lvs_med.x, lvs_med.y, lvs_max.z]).T])
+            cnrs = pd.DataFrame(cnrs, columns=['x', 'y', 'z'])
+            cnrs.loc[:, 'xlabel'] = 1
+            cnrs.loc[:, 'clstr'] = clstr
+            cnrs.loc[:, 'VX'] = VX
 
-        # find neighbouring branch and leaf points - used as entry points
-        nn = NearestNeighbors(n_neighbors=min(2, len(branch_and_leaves) - 1)).fit(branch_and_leaves[xyz])
-        distances, indices = nn.kneighbors()   
-        closest_point_to_leaf = indices[:len(cnrs), :].flatten() # only leaf points
-        idx = np.isin(closest_point_to_leaf, branch_and_leaves.loc[branch_and_leaves.xlabel == 2].index)
-        close_branch_points = closest_point_to_leaf[idx] # points where the branch is closest
+            # and combine leaves and wood
+            branch_and_leaves = pd.concat((cnrs, chull[['x', 'y', 'z', 'label', 'stem', 'xlabel', 'clstr']]), ignore_index=True)
+            branch_and_leaves.reset_index(inplace=True, drop=True)
 
-        # remove all branch points that are not close to leaves
-        idx = np.hstack([branch_and_leaves.iloc[:len(cnrs)].index.values, close_branch_points])
-        bal = branch_and_leaves.loc[branch_and_leaves.index.isin(np.unique(idx))]
+            # find neighbouring branch and leaf points - used as entry points
+            nn = NearestNeighbors(n_neighbors=min(2, len(branch_and_leaves) - 1)).fit(branch_and_leaves[xyz])
+            distances, indices = nn.kneighbors()   
+            closest_point_to_leaf = indices[:len(cnrs), :].flatten() # only leaf points
+            idx = np.isin(closest_point_to_leaf, branch_and_leaves.loc[branch_and_leaves.xlabel == 2].index)
+            close_branch_points = closest_point_to_leaf[idx] # points where the branch is closest
 
-        # generate a leaf paths graph
-        leaf_paths = generate_path(bal, 
-                                   bal.loc[bal.xlabel == 2].clstr.unique(), 
-                                   max_length=1, # i.e. any leaves which are separated by greater are ignored
-                                   n_neighbours=20)
-             
-        leaf_paths = leaf_paths.sort_values(['clstr', 'distance'])
-        leaf_paths = leaf_paths.loc[~leaf_paths['clstr'].duplicated()] # removes duplicate paths
-        leaf_paths = leaf_paths.loc[leaf_paths.distance > 0] # removes within cluseter paths 
+            # remove all branch points that are not close to leaves
+            idx = np.hstack([branch_and_leaves.iloc[:len(cnrs)].index.values, close_branch_points])
+            bal = branch_and_leaves.loc[branch_and_leaves.index.isin(np.unique(idx))]
 
-        # linking indexs to stem number
-        top2stem = branch_and_leaves.loc[branch_and_leaves.xlabel == 2].set_index('clstr')['stem'].to_dict()
-        leaf_paths.loc[:, 't_clstr'] = leaf_paths.t_clstr.map(top2stem)
-        #     paths.loc[:, 'stem'] = paths.stem_.map(base2i)
-
-        # linking index to VX number
-        index2VX = branch_and_leaves.loc[branch_and_leaves.xlabel == 1].set_index('clstr')['VX'].to_dict()
-        leaf_paths.loc[:, 'VX'] = leaf_paths['clstr'].map(index2VX)
-
-        # colour the same as stem
-        lvs = pd.merge(lvs, leaf_paths[['VX', 't_clstr', 'distance']], on='VX', how='left')
-
-        # and save
-        for lv in tqdm(in_tile_stem_nodes):
-
-            I = params.base_I[lv]
-
-            wood_fn = glob.glob(os.path.join(params.odir, '*', f'{params.n:03}_T{I}.leafoff.ply'))[0]
-
-            stem = ply_io.read_ply(os.path.join(wood_fn))
-            stem.loc[:, 'wood'] = 1
-
-            l2a = lvs.loc[lvs.t_clstr == lv]
-            if len(l2a) > 0:
-                l2a.loc[:, 'wood'] = 0
+            # generate a leaf paths graph
+            leaf_paths = generate_path(bal, 
+                                    bal.loc[bal.xlabel == 2].clstr.unique(), 
+                                    max_length=1, # i.e. any leaves which are separated by greater are ignored
+                                    n_neighbours=20)
                 
-                # colour the same as stem
-                rgb = RGB.loc[RGB.t_clstr == lv][['red', 'green', 'blue']].values[0] * 1.2
-                l2a.loc[:, ['red', 'green', 'blue']] = [c if c <= 255 else 255 for c in rgb]
+            leaf_paths = leaf_paths.sort_values(['clstr', 'distance'])
+            leaf_paths = leaf_paths.loc[~leaf_paths['clstr'].duplicated()] # removes duplicate paths
+            leaf_paths = leaf_paths.loc[leaf_paths.distance > 0] # removes within cluseter paths 
 
-                stem = pd.concat(
-                    (stem, l2a[['x', 'y', 'z', 'label', 'red', 'green', 'blue', 't_clstr', 'wood', 'distance']])
-                )
+            # linking indexs to stem number
+            top2stem = branch_and_leaves.loc[branch_and_leaves.xlabel == 2].set_index('clstr')['stem'].to_dict()
+            leaf_paths.loc[:, 't_clstr'] = leaf_paths.t_clstr.map(top2stem)
+            #     paths.loc[:, 'stem'] = paths.stem_.map(base2i)
 
-            stem = stem.loc[~stem.duplicated()]
-            ply_io.write_ply(wood_fn.replace('leafoff', 'leafon'), 
-                             stem[['x', 'y', 'z', 'red', 'green', 'blue', 'label', 't_clstr', 'wood', 'distance']])
-            if params.verbose: print(f"leaf on saved to: {wood_fn.replace('leafoff', 'leafon')}") 
+            # linking index to VX number
+            index2VX = branch_and_leaves.loc[branch_and_leaves.xlabel == 1].set_index('clstr')['VX'].to_dict()
+            leaf_paths.loc[:, 'VX'] = leaf_paths['clstr'].map(index2VX)
+
+            # colour the same as stem
+            lvs = pd.merge(lvs, leaf_paths[['VX', 't_clstr', 'distance']], on='VX', how='left')
+
+            # and save
+            for lv in tqdm(in_tile_stem_nodes):
+
+                I = params.base_I[lv]
+
+                wood_fn = glob.glob(os.path.join(params.odir, '*', f'{params.n:03}_T{I}.leafoff.ply'))[0]
+
+                stem = ply_io.read_ply(os.path.join(wood_fn))
+                stem.loc[:, 'wood'] = 1
+
+                l2a = lvs.loc[lvs.t_clstr == lv]
+                if len(l2a) > 0:
+                    l2a.loc[:, 'wood'] = 0
+                    
+                    # colour the same as stem
+                    rgb = RGB.loc[RGB.t_clstr == lv][['red', 'green', 'blue']].values[0] * 1.2
+                    l2a.loc[:, ['red', 'green', 'blue']] = [c if c <= 255 else 255 for c in rgb]
+
+                    stem = pd.concat(
+                        (stem, l2a[['x', 'y', 'z', 'label', 'red', 'green', 'blue', 't_clstr', 'wood', 'distance']])
+                    )
+
+                stem = stem.loc[~stem.duplicated()]
+                ply_io.write_ply(wood_fn.replace('leafoff', 'leafon'), 
+                                stem[['x', 'y', 'z', 'red', 'green', 'blue', 'label', 't_clstr', 'wood', 'distance']])
+                if params.verbose: print(f"leaf on saved to: {wood_fn.replace('leafoff', 'leafon')}") 
